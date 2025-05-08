@@ -1,3 +1,4 @@
+using Ciisa_IA.Dtos;
 using Microsoft.AspNetCore.Mvc;
 using System.Transactions;
 
@@ -14,17 +15,17 @@ namespace Ciisa_IA.Controllers
             _logger = logger;
         }
 
-        [HttpGet(Name = "GetAnswer")]
-        public async Task<ActionResult<string>> GetAnswer([FromQuery] string request)
+        [HttpPost(Name = "PostAnswer")]
+        public async Task<ActionResult<string>> GetAnswer([FromBody] RequestDto dto)
         {
-            if (string.IsNullOrWhiteSpace(request))
+            if (string.IsNullOrWhiteSpace(dto?.Request))
             {
-                return BadRequest("El parámetro 'request' es obligatorio.");
+                return BadRequest("La propiedad 'request' es obligatoria.");
             }
 
-            await Task.Delay(10); // Ejemplo de tarea asincrónica
+            await Task.Delay(10); // Simulación de trabajo asincrónico
 
-            var response = $"Hola, me preguntaste esto ¿verdad? : {request}";
+            var response = $"Hola, me preguntaste esto ¿verdad? : {dto.Request}";
             return Ok(response);
         }
     }
