@@ -1,0 +1,6 @@
+@Ciisa_IA_HostAddress = http://localhost:5001
+
+GET {{Ciisa_IA_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
