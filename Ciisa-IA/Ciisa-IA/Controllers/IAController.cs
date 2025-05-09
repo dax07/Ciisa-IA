@@ -28,5 +28,30 @@ namespace Ciisa_IA.Controllers
             var response = $"Hola, me preguntaste esto ¿verdad? : {dto.Request}";
             return Ok(response);
         }
+
+        [HttpPost("upload")]
+        public async Task<IActionResult> UploadFile(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest("Archivo no válido");
+
+            //var path = Path.Combine("Uploads", file.FileName);
+
+            //using (var stream = new FileStream(path, FileMode.Create))
+            //{
+            //    await file.CopyToAsync(stream);
+            //}
+
+            return Ok("Archivo subido correctamente");
+        }
+
+        //const formData = new FormData();
+        //formData.append("file", fileInput.files[0]);
+
+        //fetch("/api/upload", {
+        //        method: "POST",
+        //    body: formData
+        //});
+
     }
 }
