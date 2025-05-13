@@ -23,23 +23,23 @@ namespace Ciisa_IA.Controllers
         [HttpPost(Name = "PostAnswer")]
         public async Task<ActionResult<string>> GetAnswer([FromBody] RequestDto dto)
         {
-            if (string.IsNullOrWhiteSpace(dto?.Request))
+            /*if (string.IsNullOrWhiteSpace(dto?.Request))
             {
                 return BadRequest("La propiedad 'request' es obligatoria.");
             }
 
-            await Task.Delay(10); // Simulaci�n de trabajo asincr�nico
+            await Task.Delay(10); // Simulaci�n de trabajo asincr�nico*/
 
             string response = string.Empty;
 
-            if( string.IsNullOrEmpty(dto.ConversationId) )
+            /*if( string.IsNullOrEmpty(dto.ConversationId) )
             {
                 response = await _cvService.SendPrompt(dto.Request);
             }
             else
             {
                 response = await _cvService.ContinuePrompt(dto.Request, dto.ConversationId);
-            }
+            }*/
 
 
             return Ok(response);
