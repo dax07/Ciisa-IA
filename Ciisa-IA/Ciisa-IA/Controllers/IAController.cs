@@ -1,4 +1,5 @@
 using Ciisa_IA.Dtos;
+using Ciisa_IA.Services;
 using Microsoft.AspNetCore.Mvc;
 using System.Transactions;
 
@@ -9,10 +10,12 @@ namespace Ciisa_IA.Controllers
     public class IAController : ControllerBase
     {
         private readonly ILogger<IAController> _logger;
+        private readonly CVService _cvService;
 
-        public IAController(ILogger<IAController> logger)
+        public IAController(ILogger<IAController> logger, CVService cvService)
         {
             _logger = logger;
+            _cvService = cvService;
         }
 
         [HttpPost(Name = "PostAnswer")]
@@ -25,7 +28,18 @@ namespace Ciisa_IA.Controllers
 
             await Task.Delay(10); // Simulación de trabajo asincrónico
 
-            var response = $"Hola, me preguntaste esto ¿verdad? : {dto.Request}";
+            string response = string.Empty;
+
+            if( string.IsNullOrEmpty(dto.ConversationId) )
+            {
+                response = await _cvService.SendPrompt(dto.Request);
+            }
+            else
+            {
+                response = await _cvService.ContinuePrompt(dto.Request, dto.ConversationId);
+            }
+
+
             return Ok(response);
         }
 

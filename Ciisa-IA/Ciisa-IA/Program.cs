@@ -1,3 +1,5 @@
+using Ciisa_IA.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddCors(options =>
@@ -9,6 +11,8 @@ builder.Services.AddCors(options =>
 });
 
 // Add services to the container.
+builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<AIService>();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
