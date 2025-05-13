@@ -1,4 +1,5 @@
 using Ciisa_IA.Dtos;
+using Ciisa_IA.Services;
 using Microsoft.AspNetCore.Mvc;
 using System.Transactions;
 
@@ -9,10 +10,12 @@ namespace Ciisa_IA.Controllers
     public class IAController : ControllerBase
     {
         private readonly ILogger<IAController> _logger;
+        private readonly AIService AIService;
 
         public IAController(ILogger<IAController> logger)
         {
             _logger = logger;
+            AIService = new AIService();
         }
 
         [HttpPost(Name = "PostAnswer")]
@@ -45,13 +48,15 @@ namespace Ciisa_IA.Controllers
             return Ok("Archivo subido correctamente");
         }
 
-        //const formData = new FormData();
-        //formData.append("file", fileInput.files[0]);
 
-        //fetch("/api/upload", {
-        //        method: "POST",
-        //    body: formData
-        //});
+        [HttpPost]
+        public async Task<IActionResult> Post(PromptDTO promptDTO)
+        {
+            string AIResponse = await AIService.SendPrompt(promptDTO.Context);
+            return Ok(AIResponse);
+        }
 
     }
+
+
 }
