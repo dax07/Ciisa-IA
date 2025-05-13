@@ -53,6 +53,12 @@ namespace Ciisa_IA.Controllers
             return Ok(AIResponse);
         }
 
+        [HttpPost("ProccessCV")]
+        public async Task<IActionResult> GetProcessData([FromBody] RequestDto dto)
+        {
+            string AIResponse = await _cvService.SendPrompt(dto.Request);
+            return Ok(AIResponse);
+        }
     }
 
 

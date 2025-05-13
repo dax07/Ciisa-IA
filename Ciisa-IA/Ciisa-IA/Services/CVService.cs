@@ -1,6 +1,7 @@
 ﻿using Azure;
 using Azure.AI.OpenAI;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
 using OpenAI;
 using OpenAI.Chat;
 using System;
@@ -9,128 +10,121 @@ namespace Ciisa_IA.Services
 {
     public class CVService
     {
-        private readonly IMemoryCache _cache;
-        private readonly ChatClient _chatClient;
-        private const int MaxTokens = 512;
+        private readonly AIService AIService;
 
         public CVService(IMemoryCache cache)
         {
-            _cache = cache;
-            var azureClient = new AzureOpenAIClient(
-                new Uri("https://dramo-mahtk2xt-eastus2.cognitiveservices.azure.com/"),
-                new AzureKeyCredential("9QIGwjNNfWn1OfzY4b6o1z9LRx0lGRu1umwenMGYJNmII69JvOY4JQQJ99BEACHYHv6XJ3w3AAAAACOGtdwh")
-            );
-
-            _chatClient = azureClient.GetChatClient("gpt-4o-mini");
+            AIService = new AIService();
         }
 
         public async Task<string> SendPrompt(string prompt)
         {
             // Definimos el mensaje de sistema con **todas** las reglas y estructura
             var systemInstruction = @"
-                Eres un asistente especializado en procesar CVs y responder preguntas sobre ellos.
+                Eres un Analista de Currículums Vitae. Cuando recibas a continuación un bloque de texto plano 
+                extraído de un CV (el contenido completo del documento) debes devolver **una única respuesta estructurada en JSON** con tres secciones:
 
-                Puntos importantes para un analista y de donde pueden salir preguntas:
-                1. Perfil Personal:
-                   - edad
-                   - paisResidencia
-                   - entidadFederativa
-                   - municipioAlcaldia
+                1. **Datos extraídos**  
+                   - **Perfil Personal**  
+                     • edad  
+                     • paísResidencia  
+                     • entidadFederativa  
+                     • municipioAlcaldía  
+                   - **Perfil Profesional**  
+                     • ultimoGradoEstudios  
+                     • estatusEstudios  
+                     • tituloPuesto  
+                     • ultimosTresEmpleos: [ { empresa, puesto, funciones, añosTrabajados, sueldo } ]  
+                     • areaExperiencia  
+                     • añosExperiencia  
+                     • idiomas  
+                     • nivelIdioma  
+                   - **Conocimientos**  
+                     • conocimientos (lista abierta)  
+                     • herramientasSoftware (lista abierta)  
+                   - **Preferencias Laborales**  
+                     • disponibilidadInmediata (Sí/No)  
+                     • modalidadEmpleo (Home Office/Presencial/Híbrido)  
+                     • expectativaSalarial (rango)
 
-                2. Perfil Profesional:
-                   - ultimoGradoEstudios
-                   - estatusEstudios
-                   - tituloPuesto
-                   - ultimosTresEmpleos: [
-                       empresa, puesto, funciones, añosTrabajados, sueldo
-                     ]
-                   - areaExperiencia
-                   - añosExperiencia
-                   - idiomas
-                   - nivelIdioma
+                2. **Respuestas a las 4 preguntas clave**  
+                   A partir del mismo CV, responde de forma directa y breve a estas preguntas:  
+                   1) ¿Tiene más de 6 meses sin trabajar en su trayectoria laboral?  
+                   2) ¿Vive en Monterrey, N.L. o municipios aledaños?  
+                   3) ¿Ha trabajado en posiciones similares a vendedor comercial? ¿Cuáles?  
+                   4) ¿Ha trabajado en más de 1 puesto en un año?  
 
-                3. Conocimientos:
-                   - conocimientos
-                   - herramientasSoftware
+                3. **Resumen ejecutivo del CV**  
+                   Un párrafo de 2–3 líneas que destaque el perfil general del candidato:  
+                   formación, experiencia principal y competencias clave. Y que también incluya las 4 preguntas  
+                   del punto anterior y sus respuestas.
 
-                4. Preferencias Laborales:
-                   - disponibilidadInmediata
-                   - modalidadEmpleo
-                   - expectativaSalarial
+                **Instrucciones adicionales**  
+                - El **input** será solo la cadena de texto del CV; no recibirás JSON ni metadatos.  
+                - Tu **output** debe ser **únicamente** un **objeto JSON** con tres propiedades:  
+                  - `datosExtraidos`  
+                  - `respuestasPreguntas`  
+                  - `resumenEjecutivo`  
+                - **No** incluyas explicaciones, ni texto extra fuera de ese JSON.  
+                - Si algún campo no aparece en el CV, usa `null` o `[]` según corresponda.  
+                - No implementes funcionalidades de chat ni mantengas contexto: cada petición es **independiente**.
 
-                Flujo:
-                1) Cuando el usuario envía un texto extenso (su CV), lo procesas y RESPONDES:
-                   'CV recibido y procesado con éxito. ¿Qué quieres saber ahora sobre este candidato? 
-                    Por ejemplo: ""¿Cuál es el correo electrónico?"" o ""¿Cuál es su país de residencia?""'
+                **Ejemplo de salida JSON**:
+                    {
+                      datosExtraidos: {
+                        perfilPersonal: {
+                          edad: int,
+                          paisResidencia: string,
+                          entidadFederativa: string,
+                          municipioAlcaldia: string
+                        },
+                        perfilProfesional: {
+                          ultimoGradoEstudios: string,
+                          estatusEstudios: string,
+                          tituloPuesto: string,
+                          ultimosTresEmpleos: [
+                            {
+                              empresa: string,
+                              puesto: string,
+                              funciones: string,
+                              añosTrabajados: int,
+                              sueldo: string
+                            }
+                          ],
+                          areaExperiencia: string,
+                          añosExperiencia: int,
+                          idiomas: [ string ],
+                          nivelIdioma: [ string ]
+                        },
+                        conocimientos: {
+                          conocimientos: [ string ],
+                          herramientasSoftware: [ string ]
+                        },
+                        preferenciasLaborales: {
+                          disponibilidadInmediata: bool,
+                          modalidadEmpleo: string,
+                          expectativaSalarial: string
+                        }
+                      },
+                      respuestasPreguntas: {
+                        tieneMasDe6MesesSinTrabajar: bool,
+                        viveEnMonterreyOMunicipiosAledanos: bool,
+                        haTrabajadoComoVendedorComercial: bool,
+                        haTrabajadoEnMasDeUnPuestoEnUnAno: bool
+                      },
+                      resumenEjecutivo: string
+                    }";
 
-                2) A partir de ese momento, cada nuevo input del usuario será una PREGUNTA sobre el CV cargado:
-                   a) Primero, normaliza la pregunta corrigiendo pequeños errores de ortografía, tilde, plural/singular 
-                        (Viven por Vive, Tienen por Tiene y se intuye que habla del candidato), etc.
-                   b) Después de la corrección, proporcionas la respuesta directa extraída del CV.
-
-                3) Las preguntas no necesariamente incluye la palabra 'candidato' o 'el candidato', igualmente intentas responder con la información disponible, teniendo
-                    en cuenta que se refiere al candidato.
-                   - Si dicha información no existe en el CV, respondes:
-                     'No dispongo de esa información en el CV proporcionado o vuelva a formular la pregunta.'
-
-                4) NUNCA salgas de este dominio. Si la pregunta no se relaciona con el CV, responde:
-                   'Lo siento, solo puedo responder preguntas sobre el CV proporcionado.'
-
-                No generes JSON en esta fase, salvo si fuera estrictamente necesario para clarificar un dato extraído (pero en este flujo no es necesario).";
-
-
-            // Crear nuevo ID para conversacion
-            string conversationId = Guid.NewGuid().ToString("N");
-
-            // Construimos la conversación: primero el sistema, luego el usuario
-            var messages = new List<ChatMessage>
-            {
-                new SystemChatMessage(systemInstruction),
-                new UserChatMessage(prompt)
-            };
-
-            // 3) Guardar en cache por 30 minutos
-            _cache.Set(conversationId, messages, TimeSpan.FromMinutes(30));
-
-            // 4) Devolver saludo inicial
-            return "CV recibido y procesado con éxito. ¿Qué quieres saber ahora? " +
-                   "Por ejemplo: “¿Cuál es el correo electrónico?” " + conversationId;
-        }
-
-        public async Task<string> ContinuePrompt(string prompt, string conversationId)
-        {
-            if (!_cache.TryGetValue<List<ChatMessage>>(conversationId, out var messages))
-                return "No encontré tu conversación. Por favor envía de nuevo el CV.";
-
-            // Si piden procesar nuevo CV
-            /*if (prompt.Trim().Equals("procesar nuevo cv", StringComparison.OrdinalIgnoreCase))
-            {
-                _cache.Remove(conversationId);
-                return "Claro, por favor vuelve a enviarme el texto completo del nuevo CV.";
-            }*/
-
-            // Añadir la pregunta del usuario
-            messages.Add(new UserChatMessage(prompt));
-
-            // Opciones de la llamada
-            var options = new ChatCompletionOptions
-            {
-                MaxOutputTokenCount = MaxTokens,
-                Temperature = 0.0f,   // temperatura baja para respuestas muy deterministas
-                TopP = 1.0f
-            };
+            var fullPrompt = systemInstruction
+                   + "\n\n--- Comienza CV ---\n"
+                   + prompt
+                   + "\n--- Fin CV ---\n";
 
             // Llamada al endpoint
-            var response = await _chatClient.CompleteChatAsync(messages, options);
+            var response = await AIService.SendPrompt(fullPrompt);
 
-            // Respuesta de OpenAI
-            var answer = response.Value.Content[0].Text.Trim();
-
-            // Guardar la respuesta para contexto futuro
-            messages.Add(new AssistantChatMessage(answer));
-            _cache.Set(conversationId, messages, TimeSpan.FromMinutes(30));
-
-            return answer;
+            // Devolver data procesada
+            return response;
         }
     }
 }
