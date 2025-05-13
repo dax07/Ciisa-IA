@@ -1,7 +1,6 @@
 using Ciisa_IA.Dtos;
 using Ciisa_IA.Services;
 using Microsoft.AspNetCore.Mvc;
-using System.Transactions;
 
 namespace Ciisa_IA.Controllers
 {
@@ -10,39 +9,24 @@ namespace Ciisa_IA.Controllers
     public class IAController : ControllerBase
     {
         private readonly ILogger<IAController> _logger;
-        private readonly AIService AIService;
+        private readonly AIService _AIService;
         private readonly CVService _cvService;
+        private readonly RHService _rhService;
 
-        public IAController(ILogger<IAController> logger, CVService cvService)
+        public IAController(ILogger<IAController> logger, AIService AIService,
+            CVService cvService, RHService rhService)
         {
             _logger = logger;
-            AIService = new AIService();
+            _AIService = AIService;
             _cvService = cvService;
+            _rhService = rhService;
         }
 
         [HttpPost(Name = "PostAnswer")]
-        public async Task<ActionResult<string>> GetAnswer([FromBody] RequestDto dto)
+        public async Task<ActionResult<string>> GetAnswer([FromBody] RequestDto requestDTO)
         {
-            /*if (string.IsNullOrWhiteSpace(dto?.Request))
-            {
-                return BadRequest("La propiedad 'request' es obligatoria.");
-            }
-
-            await Task.Delay(10); // Simulaci�n de trabajo asincr�nico*/
-
-            string response = string.Empty;
-
-            /*if( string.IsNullOrEmpty(dto.ConversationId) )
-            {
-                response = await _cvService.SendPrompt(dto.Request);
-            }
-            else
-            {
-                response = await _cvService.ContinuePrompt(dto.Request, dto.ConversationId);
-            }*/
-
-
-            return Ok(response);
+            string AIResponse = await _AIService.SendPrompt(requestDTO.Request);
+            return Ok(AIResponse);
         }
 
         [HttpPost("upload")]
@@ -62,10 +46,10 @@ namespace Ciisa_IA.Controllers
         }
 
 
-        [HttpPost]
-        public async Task<IActionResult> Post(PromptDTO promptDTO)
+        [HttpPost("CreateProfile")]
+        public async Task<IActionResult> CreateProfile(ProfileRequirementsDTO profileRequirementsDTO)
         {
-            string AIResponse = await AIService.SendPrompt(promptDTO.Context);
+            string AIResponse =  await _rhService.CreateProfile(profileRequirementsDTO);
             return Ok(AIResponse);
         }
 

@@ -13,6 +13,8 @@ builder.Services.AddCors(options =>
 // Add services to the container.
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<AIService>();
+builder.Services.AddSingleton<CVService>();
+builder.Services.AddSingleton<RHService>();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
