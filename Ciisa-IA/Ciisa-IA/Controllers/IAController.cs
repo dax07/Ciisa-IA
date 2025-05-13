@@ -10,11 +10,13 @@ namespace Ciisa_IA.Controllers
     public class IAController : ControllerBase
     {
         private readonly ILogger<IAController> _logger;
+        private readonly AIService AIService;
         private readonly CVService _cvService;
 
         public IAController(ILogger<IAController> logger, CVService cvService)
         {
             _logger = logger;
+            AIService = new AIService();
             _cvService = cvService;
         }
 
@@ -26,7 +28,7 @@ namespace Ciisa_IA.Controllers
                 return BadRequest("La propiedad 'request' es obligatoria.");
             }
 
-            await Task.Delay(10); // Simulación de trabajo asincrónico
+            await Task.Delay(10); // Simulaciï¿½n de trabajo asincrï¿½nico
 
             string response = string.Empty;
 
@@ -47,7 +49,7 @@ namespace Ciisa_IA.Controllers
         public async Task<IActionResult> UploadFile(IFormFile file)
         {
             if (file == null || file.Length == 0)
-                return BadRequest("Archivo no válido");
+                return BadRequest("Archivo no vï¿½lido");
 
             //var path = Path.Combine("Uploads", file.FileName);
 
@@ -59,13 +61,15 @@ namespace Ciisa_IA.Controllers
             return Ok("Archivo subido correctamente");
         }
 
-        //const formData = new FormData();
-        //formData.append("file", fileInput.files[0]);
 
-        //fetch("/api/upload", {
-        //        method: "POST",
-        //    body: formData
-        //});
+        [HttpPost]
+        public async Task<IActionResult> Post(PromptDTO promptDTO)
+        {
+            string AIResponse = await AIService.SendPrompt(promptDTO.Context);
+            return Ok(AIResponse);
+        }
 
     }
+
+
 }
