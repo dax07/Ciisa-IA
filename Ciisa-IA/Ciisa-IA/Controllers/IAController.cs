@@ -46,12 +46,20 @@ namespace Ciisa_IA.Controllers
         }
 
 
+        //[HttpPost("CreateProfile")]
+        //public async Task<IActionResult> CreateProfile(ProfileRequirementsDTO profileRequirementsDTO)
+        //{
+        //    string AIResponse =  await _rhService.CreateProfile(profileRequirementsDTO);
+        //    return Ok(AIResponse);
+        //}
+
         [HttpPost("CreateProfile")]
-        public async Task<IActionResult> CreateProfile(ProfileRequirementsDTO profileRequirementsDTO)
+        public async Task<IActionResult> CreateProfile(ProfileCissaDTO profileCissaDTO)
         {
-            string AIResponse =  await _rhService.CreateProfile(profileRequirementsDTO);
+            string AIResponse = await _rhService.CreateProfile(profileCissaDTO);
             return Ok(AIResponse);
         }
+
 
         [HttpPost("ProccessCV")]
         public async Task<IActionResult> GetProcessData([FromBody] RequestDto dto)

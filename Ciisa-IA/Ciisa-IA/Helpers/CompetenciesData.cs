@@ -1,6 +1,6 @@
 ﻿namespace Ciisa_IA.Helpers
 {
-    public class Competencies
+    public class CompetenciesData
     {
         public static readonly List<Competency> All = new()
         {
