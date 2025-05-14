@@ -56,7 +56,19 @@ namespace Ciisa_IA.Controllers
         [HttpPost("ProccessCV")]
         public async Task<IActionResult> GetProcessData([FromBody] RequestDto dto)
         {
-            string AIResponse = await _cvService.SendPrompt(dto.Request);
+            // Inicializamos la respuesta
+            string AIResponse = string.Empty;
+
+            // Evaluamos si es una continuacion de la conversación
+            if ( string.IsNullOrEmpty(dto.ConversationId) )
+            {
+                AIResponse = await _cvService.SendPrompt(dto.Request);
+            }
+            else
+            {
+                AIResponse = await _cvService.ContinueConversationAsync(dto.ConversationId, dto.Request);
+            }
+
             return Ok(AIResponse);
         }
     }

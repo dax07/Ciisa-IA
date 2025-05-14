@@ -11,18 +11,25 @@ namespace Ciisa_IA.Services
     public class CVService
     {
         private readonly AIService AIService;
+        private readonly IMemoryCache _cache;
 
         public CVService(IMemoryCache cache)
         {
             AIService = new AIService();
+            _cache = cache;
         }
 
         public async Task<string> SendPrompt(string prompt)
         {
+            // Crear nuevo ID de conversacion
+            string conversationId = Guid.NewGuid().ToString("N");
+
             // Definimos el mensaje de sistema con **todas** las reglas y estructura
             var systemInstruction = @"
                 Eres un Analista de Currículums Vitae. Cuando recibas a continuación un bloque de texto plano 
-                extraído de un CV (el contenido completo del documento) debes devolver **una única respuesta estructurada en JSON** con tres secciones:
+                extraído de un CV (el contenido completo del documento) debes devolver **una respuesta estructurada en JSON, cuando tomes el rol de consultor regresa solo una cadena de texto** con tres secciones,
+                despues de esto el usuario podria hacerte mas preguntas acerca del CV **La siguiente estructura solo la regresaras 
+                una sola vez, porque la siguiente accion del usuario sera hacerte preguntas sobre el CV procesado**:
 
                 1. **Datos extraídos**  
                    - **Perfil Personal**  
@@ -69,7 +76,13 @@ namespace Ciisa_IA.Services
                 - Si algún campo no aparece en el CV, usa `null` o `[]` según corresponda.  
                 - No implementes funcionalidades de chat ni mantengas contexto: cada petición es **independiente**.
 
-                **Ejemplo de salida JSON**:
+                **Como primera respuesta devuelves la siguiente estructura, despues solo tomaras el rol de consultor, recibiras
+                una pregunta y debes responder con la informacion que se te proporciono en el CV**
+
+                **No salgas de tu rol, si hacen preguntas que no corresponden al CV contesta:
+                    - Lo siento, no puedo responder a tu pregunta.
+
+                **Ejemplo de salida JSON tambien debemos regresar el Id de la conversación**:
                     {
                       datosExtraidos: {
                         perfilPersonal: {
@@ -112,18 +125,68 @@ namespace Ciisa_IA.Services
                         haTrabajadoComoVendedorComercial: bool,
                         haTrabajadoEnMasDeUnPuestoEnUnAno: bool
                       },
-                      resumenEjecutivo: string
-                    }";
+                      resumenEjecutivo: string,
+                      conversationId: " + conversationId 
+                      + "}";
 
+            // Armamos el promt
             var fullPrompt = systemInstruction
                    + "\n\n--- Comienza CV ---\n"
                    + prompt
                    + "\n--- Fin CV ---\n";
 
+            // Crear la lista e incluir system + CV
+            var messages = new List<ChatMessage>
+            {
+                new SystemChatMessage(systemInstruction),
+                new UserChatMessage(prompt)
+            };
+
+            // Guardar en cache por 30 minutos
+            _cache.Set(conversationId, messages, TimeSpan.FromMinutes(30));
+
             // Llamada al endpoint
-            var response = await AIService.SendPrompt(fullPrompt);
+            var response = await AIService.SendPrompt(messages, new ChatCompletionOptions
+            {
+                MaxOutputTokenCount = 4096,
+                Temperature = 0.0f,
+                TopP = 1.0f
+            });
 
             // Devolver data procesada
+            return response;
+        }
+
+        public async Task<string> ContinueConversationAsync(string conversationId, string question)
+        {
+            if (!_cache.TryGetValue<List<ChatMessage>>(conversationId, out var messages))
+                return "No encontré tu conversación. Por favor envía de nuevo el CV.";
+
+            // Si piden procesar nuevo CV
+            //if (question.Trim().Equals("procesar nuevo cv", StringComparison.OrdinalIgnoreCase))
+            //{
+            //    _cache.Remove(conversationId);
+            //    return "Claro, por favor vuelve a enviarme el texto completo del nuevo CV.";
+            //}
+
+            var systemInstruction = "Ahora toma el rol de consultor (**Debes devolver solo el texto de la respuesta osea una string**)" +
+                "devuelve la respuesta a la siguiente pregunta: ";
+
+            // Añadir la pregunta del usuario
+            messages.Add(new UserChatMessage(systemInstruction + question));
+
+            // Llamar al modelo
+            var response = await AIService.SendPrompt(messages, new ChatCompletionOptions
+            {
+                MaxOutputTokenCount = 512,
+                Temperature = 0.0f,
+                TopP = 1.0f
+            });
+
+            // Guardar la respuesta para contexto futuro
+            messages.Add(new AssistantChatMessage(response));
+            _cache.Set(conversationId, messages, TimeSpan.FromMinutes(30));
+
             return response;
         }
     }

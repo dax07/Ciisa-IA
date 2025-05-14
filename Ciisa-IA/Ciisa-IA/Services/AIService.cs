@@ -36,5 +36,13 @@ namespace Ciisa_IA.Services
 
             return response.Value.Content[0].Text;
         }
+
+        public async Task<string> SendPrompt(List<ChatMessage> messages, ChatCompletionOptions requestOptions)
+        {
+
+            var response = await _chatClient.CompleteChatAsync(messages, requestOptions);
+
+            return response.Value.Content[0].Text;
+        }
     }
 }
