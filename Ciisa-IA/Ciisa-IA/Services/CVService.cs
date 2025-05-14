@@ -79,8 +79,7 @@ namespace Ciisa_IA.Services
                 **Como primera respuesta devuelves la siguiente estructura, despues solo tomaras el rol de consultor, recibiras
                 una pregunta y debes responder con la informacion que se te proporciono en el CV**
 
-                **No salgas de tu rol, si hacen preguntas que no corresponden al CV contesta:
-                    - Lo siento, no puedo responder a tu pregunta.
+                
 
                 **Ejemplo de salida JSON tambien debemos regresar el Id de la conversación**:
                     {
