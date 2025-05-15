@@ -1,5 +1,6 @@
 ﻿using Ciisa_IA.Dtos;
 using Ciisa_IA.Helpers;
+using OpenAI.Chat;
 using System.Text;
 
 namespace Ciisa_IA.Services
@@ -61,7 +62,7 @@ namespace Ciisa_IA.Services
             foreach (Competency competency in competencies)
             {
                 string competencyItemText = $"""
-                 {competency.Id}.- {competency.Name} 
+                 { competency.Id}.- {competency.Name} 
                  Categoría: {competency.CategoryName}
                  Descripción: {competency.Description}
                  """;
@@ -84,42 +85,69 @@ namespace Ciisa_IA.Services
 
             foreach (var requirement in competencyLevelRange.Requirements)
             {
-                requirementsText.AppendLine($"- {requirement.ExpectedCount} competencias deben tener la ponderación **{requirement.Score}**");
+                if (requirement.ExpectedCount > 0)
+                {
+                    if (requirement.ExpectedCount > 1)
+                        requirementsText.AppendLine($"- {requirement.ExpectedCount} competencias de la lista debén estar ponderadas en **{requirement.Score}**");
+                    else
+                        requirementsText.AppendLine($"- {requirement.ExpectedCount} competencia de la lista debé estar ponderada en **{requirement.Score}**");
+                }
+                
             }
+
+            const string jsonTemplate = """
+                [
+                    {
+                    "name": "{0}",
+                    "score": {1}
+                    },
+                    {
+                    "name": "{2}",
+                    "score": {3}
+                    }
+                ]
+                """;
+
+            string systemPrompt = $"""
+                Eres un reclutador de RR.HH. experto en redactar perfiles. 
+                Sigue **estrictamente** estas reglas de distribución y ponderaciones:
+                {requirementsText}
+                Usa **solo** la lista de competencias que te doy y no inventes otras.
+                Responde únicamente con las competencias y sus ponderaciones.
+            """;
 
             string prompt = $"""
              Tienes la siguiente información de un perfil:
-
              - Nombre de puesto: {profileCissaDTO.JobTitle}
              - Nivel de puesto: {profileCissaDTO.JobLevel}
              - Responsabilidades: {profileCissaDTO.Responsibilities}
 
-             **Instrucciones claras:**
-             1. **Distribución por categorías**
-             {competencyDistributionText.ToString()}
-             - **IMPORTANTE**: Respeta el número exacto de competencias por categoría. No selecciones más ni menos de lo solicitado en cada categoría.
-             
+             Instrucciones:
+             1. En base a la siguiente lista:
+             {competenciesText}
+             debes elegir {competencyLevelRange.TotalRequirements} competencias de la siguiente manera:
+             {competencyDistributionText}
 
-             2. **Ponderaciones**:
-             Las competencias seleccionadas deben ser evaluadas con las siguientes ponderaciones, sin importar la categoría:
-             {requirementsText.ToString()}
-             **IMPORTANTE**: Asegúrate de que las competencias seleccionadas tengan la ponderación exacta indicada. 
+             4. **Salida JSON** por favor descarta cualquier otra palabra que no sea la estructura del json:
 
-             3. **Basado en las responsabilidades del puesto, el nombre del cargo, y las instrucciones anteriores**, selecciona las competencias de esta lista:
-             
-             {competenciesText.ToString()}
-
-             4. **Formato de la respuesta**:
-             - Categoría | Nombre Competencia | Ponderación
-             **IMPORTANTE**: Respeta estrictamente el número de competencias por categoría y la distribución de ponderaciones como se indica. No se debe seleccionar más ni menos de lo solicitado en cada categoría.
+             {jsonTemplate}
+            
              """;
 
-            string finalPrompt = $"""
-             {_baseContext} 
-             {prompt} 
-         """;
+            var messages = new List<ChatMessage>
+            {
+                new SystemChatMessage(systemPrompt),
+                new UserChatMessage(prompt)
+            };
 
-            return await _AIService.SendPrompt(finalPrompt);
+            string response = await _AIService.SendPrompt(messages, new ChatCompletionOptions
+            {
+                MaxOutputTokenCount = 4096,
+                Temperature = 0.0f,
+                TopP = 1.0f
+            });
+
+            return response;
         }
 
     }
