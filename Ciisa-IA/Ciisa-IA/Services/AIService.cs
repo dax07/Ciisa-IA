@@ -15,7 +15,7 @@ namespace Ciisa_IA.Services
                 new AzureKeyCredential("9QIGwjNNfWn1OfzY4b6o1z9LRx0lGRu1umwenMGYJNmII69JvOY4JQQJ99BEACHYHv6XJ3w3AAAAACOGtdwh")
             );
 
-            _chatClient = azureClient.GetChatClient("gpt-4o-mini");
+            _chatClient = azureClient.GetChatClient("gpt-4o");
         }
 
         public async Task<string> SendPrompt(string prompt)
